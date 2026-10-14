@@ -1,12 +1,12 @@
 
-import React,{useEffect,useMemo,useState} from 'react'
+import React,{useEffect,useMemo,useRef,useState} from 'react'
 import {createRoot} from 'react-dom/client'
 import {LineChart,Line,XAxis,YAxis,Tooltip,ResponsiveContainer,CartesianGrid} from 'recharts'
-import {Dumbbell,HeartPulse,Utensils,Scale,Droplets,Activity,LogOut,Settings,Clock3} from 'lucide-react'
+import {Dumbbell,HeartPulse,Utensils,Scale,Droplets,Activity,LogOut,Settings,Clock3,Camera,ImagePlus,Images} from 'lucide-react'
 import {supabase} from './supabaseClient'
 import './styles.css'
 
-const APP_VERSION='V10 CLEAN'
+const APP_VERSION='V11.1 CLEAN'
 
 const blankProfile={
   name:'',sex:'',age:'',height_cm:'',start_weight_kg:'',target_weight_kg:'',
@@ -17,7 +17,8 @@ const blankProfile={
   custom_cardio_minutes:'',photo_url:'',meals_per_day:5,
   wake_time:'',cardio_time:'',breakfast_time:'',leave_home_time:'',
   lunch_time:'',snack_time:'',home_time:'',workout_time:'',dinner_time:'',sleep_time:'',
-  food_restrictions:'',food_preferences:'',diet_style:'equilibrada'
+  food_restrictions:'',food_preferences:'',diet_style:'equilibrada',
+  home_equipment:[], photo_storage_path:''
 }
 
 function autoTargets(p,w){
@@ -43,43 +44,90 @@ function getTargets(p,w){
     cardio:Number(p.custom_cardio_minutes||a.cardio)
   }
 }
+function hasEq(p,eq){
+  return Array.isArray(p.home_equipment) && p.home_equipment.includes(eq)
+}
+function homeLower(p){
+  const ex=[]
+  const knee=(p.limitations||'').toLowerCase().includes('joelho')
+  ex.push(knee?'Agachamento para cadeira — 3x10–15':'Agachamento livre — 4x10–20')
+  if(hasEq(p,'halteres')) ex.push('Stiff com halteres — 3x10–15')
+  else if(hasEq(p,'mochila')) ex.push('Stiff com mochila carregada — 3x10–15')
+  else ex.push('Stiff unilateral sem carga — 3x10–15 por perna')
+  ex.push('Elevação pélvica — 4x12–20')
+  if(hasEq(p,'banco')) ex.push('Agachamento búlgaro no banco — 3x8–15 por perna')
+  else ex.push('Avanço estacionário — 3x8–15 por perna')
+  if(hasEq(p,'elastico')) ex.push('Abdução de quadril com elástico — 3x15–25')
+  else ex.push('Abdução lateral deitada — 3x15–25')
+  ex.push('Panturrilha em pé — 4x15–25')
+  return ex
+}
+function homeUpper(p){
+  const ex=[]
+  ex.push(hasEq(p,'banco')?'Flexão inclinada no banco — 4x6–15':'Flexão na parede/chão — 4x6–15')
+  if(hasEq(p,'halteres')) ex.push('Remada unilateral com halter — 4x10–15')
+  else if(hasEq(p,'mochila')) ex.push('Remada unilateral com mochila — 4x10–15')
+  else if(hasEq(p,'elastico')) ex.push('Remada com elástico — 4x12–20')
+  else ex.push('Remada isométrica com toalha — 4x20–30s')
+  if(hasEq(p,'halteres')) ex.push('Desenvolvimento com halteres — 3x10–15')
+  else if(hasEq(p,'elastico')) ex.push('Desenvolvimento com elástico — 3x12–20')
+  else ex.push('Pike push-up assistida — 3x6–12')
+  if(hasEq(p,'halteres')) ex.push('Elevação lateral com halteres — 3x12–20')
+  else if(hasEq(p,'elastico')) ex.push('Elevação lateral com elástico — 3x15–25')
+  else ex.push('Elevação lateral isométrica sem carga — 3x20–30s')
+  if(hasEq(p,'barra')) ex.push('Barra fixa assistida/negativa — 3x3–8')
+  else ex.push('Rosca bíceps com mochila/elástico — 3x10–20')
+  ex.push('Tríceps acima da cabeça com mochila/elástico — 3x10–20')
+  return ex
+}
+function gymLower(p){
+  const knee=(p.limitations||'').toLowerCase().includes('joelho')
+  return [
+    knee?'Leg press em amplitude confortável — 3x10–15':'Agachamento livre/hack — 4x8–12',
+    'Hip thrust — 4x8–12',
+    'Mesa flexora — 3x10–15',
+    knee?'Cadeira extensora leve — 3x12–15':'Afundo/passada — 3x10–12',
+    'Cadeira abdutora — 3x15–20',
+    'Panturrilha máquina — 4x12–20'
+  ]
+}
+function gymUpper(){
+  return [
+    'Supino reto/máquina — 4x6–10',
+    'Puxada frontal — 4x8–12',
+    'Remada baixa — 3x8–12',
+    'Desenvolvimento — 3x8–12',
+    'Elevação lateral — 3x12–15',
+    'Rosca bíceps + tríceps polia — 3x10–15'
+  ]
+}
 function buildPlan(p){
   const home=p.training_location==='casa'
-  const knee=(p.limitations||'').toLowerCase().includes('joelho')
+  const low=home?homeLower(p):gymLower(p)
+  const up=home?homeUpper(p):gymUpper()
+  const full=[low[0],up[0],up[1],low[1],up[2],'Prancha — 3x30–60s']
   const focus=(p.focus_area||'').toLowerCase()
   const lowerFocus=focus.includes('glúte')||focus.includes('perna')
   const days=Math.max(1,Math.min(5,Number(p.training_days||3)))
-
-  const homeLow=[
-    'Agachamento para cadeira — 3x10–15','Elevação pélvica no chão — 4x12–20',
-    'Stiff com mochila/halteres — 3x10–15','Avanço assistido — 3x8–12 por perna',
-    'Abdução com faixa — 3x15–20','Panturrilha em pé — 4x15–20'
-  ]
-  const homeUp=[
-    'Flexão na parede/banco/chão — 4x6–15','Remada unilateral com mochila/halter — 4x10–15',
-    'Desenvolvimento com halteres/garrafas — 3x10–15','Elevação lateral — 3x12–20',
-    'Rosca bíceps — 3x10–15','Tríceps acima da cabeça — 3x10–15'
-  ]
-  const gymLow=[
-    knee?'Leg press amplitude confortável — 3x10–15':'Agachamento livre/hack — 4x8–12',
-    'Hip thrust — 4x8–12','Mesa flexora — 3x10–15',
-    knee?'Cadeira extensora leve — 3x12–15':'Afundo/passada — 3x10–12',
-    'Cadeira abdutora — 3x15–20','Panturrilha máquina — 4x12–20'
-  ]
-  const gymUp=[
-    'Supino reto/máquina — 4x6–10','Puxada frontal — 4x8–12','Remada baixa — 3x8–12',
-    'Desenvolvimento — 3x8–12','Elevação lateral — 3x12–15','Rosca + tríceps — 3x10–15'
-  ]
-
-  const low=home?homeLow:gymLow, up=home?homeUp:gymUp
-  const full=[low[0],up[0],up[1],low[1],up[3],'Prancha — 3x30–60s']
   let out=[]
-  if(days===1)out=[{name:'A',sub:'Corpo inteiro',ex:full}]
-  if(days===2)out=[{name:'A',sub:lowerFocus?'Inferiores':'Corpo inteiro',ex:lowerFocus?low:full},{name:'B',sub:'Superiores + core',ex:[...up.slice(0,5),'Prancha — 3x30–60s']}]
-  if(days===3)out=[{name:'A',sub:lowerFocus?'Glúteos/posteriores':'Corpo inteiro 1',ex:lowerFocus?low:full},{name:'B',sub:'Superiores + core',ex:[...up.slice(0,5),'Prancha — 3x30–60s']},{name:'C',sub:lowerFocus?'Pernas/glúteos':'Corpo inteiro 2',ex:lowerFocus?low:[...low.slice(0,3),...up.slice(0,3)]}]
+  if(days===1) out=[{name:'A',sub:'Corpo inteiro',ex:full}]
+  if(days===2) out=[
+    {name:'A',sub:lowerFocus?'Inferiores / foco':'Corpo inteiro',ex:lowerFocus?low:full},
+    {name:'B',sub:'Superiores + core',ex:[...up.slice(0,5),'Prancha — 3x30–60s']}
+  ]
+  if(days===3) out=[
+    {name:'A',sub:lowerFocus?'Glúteos / posteriores':'Corpo inteiro 1',ex:lowerFocus?low:full},
+    {name:'B',sub:'Superiores + core',ex:[...up.slice(0,5),'Prancha — 3x30–60s']},
+    {name:'C',sub:lowerFocus?'Pernas / glúteos':'Corpo inteiro 2',ex:lowerFocus?[...low].reverse():[...low.slice(0,3),...up.slice(0,3)]}
+  ]
   if(days>=4){
-    out=[{name:'A',sub:'Inferiores',ex:low},{name:'B',sub:'Superiores',ex:up},{name:'C',sub:'Inferiores 2',ex:[...low].reverse()},{name:'D',sub:'Superiores 2 + core',ex:[...up.slice(1,5),'Prancha — 3x30–60s']}]
-    if(days===5)out.push({name:'E',sub:'Corpo inteiro leve',ex:full})
+    out=[
+      {name:'A',sub:'Inferiores',ex:low},
+      {name:'B',sub:'Superiores',ex:up},
+      {name:'C',sub:'Inferiores 2',ex:[...low].reverse()},
+      {name:'D',sub:'Superiores 2 + core',ex:[...up.slice(1,5),'Prancha — 3x30–60s']}
+    ]
+    if(days===5) out.push({name:'E',sub:'Corpo inteiro leve',ex:full})
   }
   return out
 }
@@ -183,18 +231,43 @@ function Login(){
 }
 
 function Profile({session,initial,onSave,onCancel}){
+  const galleryRef=useRef(null)
+  const cameraRef=useRef(null)
   const[f,setF]=useState(initial?{...blankProfile,...initial}:blankProfile),[msg,setMsg]=useState('')
   function s(k,v){setF(x=>({...x,[k]:v}))}
+  async function uploadProfilePhoto(file){
+    if(!file)return
+    setMsg('Enviando foto...')
+    const ext=(file.name?.split('.').pop()||'jpg').toLowerCase()
+    const path=`${session.user.id}/profile.${ext}`
+    const {error}=await supabase.storage.from('profile-photos').upload(path,file,{upsert:true,contentType:file.type||'image/jpeg'})
+    if(error){setMsg('Erro na foto: '+error.message);return}
+    const {data}=supabase.storage.from('profile-photos').getPublicUrl(path)
+    s('photo_url',data.publicUrl)
+    s('photo_storage_path',path)
+    setMsg('Foto carregada.')
+  }
   const a=autoTargets(f,f.start_weight_kg)
   function num(v){return v===''||v===null||v===undefined?null:Number(v)}
   async function save(e){
     e.preventDefault()
+    const timeOrNull=(v)=>v===''||v===null||v===undefined?null:v
     const payload={...f,
       age:num(f.age),height_cm:num(f.height_cm),start_weight_kg:num(f.start_weight_kg),
       target_weight_kg:num(f.target_weight_kg),training_days:num(f.training_days),
       session_minutes:num(f.session_minutes),meals_per_day:num(f.meals_per_day)||5,
       custom_calories:num(f.custom_calories),custom_protein_g:num(f.custom_protein_g),
       custom_water_l:num(f.custom_water_l),custom_cardio_minutes:num(f.custom_cardio_minutes),
+      wake_time:timeOrNull(f.wake_time),
+      cardio_time:timeOrNull(f.cardio_time),
+      breakfast_time:timeOrNull(f.breakfast_time),
+      leave_home_time:timeOrNull(f.leave_home_time),
+      lunch_time:timeOrNull(f.lunch_time),
+      snack_time:timeOrNull(f.snack_time),
+      home_time:timeOrNull(f.home_time),
+      workout_time:timeOrNull(f.workout_time),
+      dinner_time:timeOrNull(f.dinner_time),
+      sleep_time:timeOrNull(f.sleep_time),
       user_id:session.user.id,updated_at:new Date().toISOString()
     }
     const {data,error}=await supabase.from('profiles').upsert(payload,{onConflict:'user_id'}).select().eq('user_id',session.user.id).single()
@@ -212,7 +285,16 @@ function Profile({session,initial,onSave,onCancel}){
       <label>Altura (cm)<input type="number" value={f.height_cm} onChange={e=>s('height_cm',e.target.value)} required/></label>
       <label>Peso inicial<input type="number" step="0.1" value={f.start_weight_kg} onChange={e=>s('start_weight_kg',e.target.value)} required/></label>
       <label>Meta de peso<input type="number" step="0.1" value={f.target_weight_kg} onChange={e=>s('target_weight_kg',e.target.value)} required/></label>
-      <label>Foto (URL)<input type="url" placeholder="https://..." value={f.photo_url||''} onChange={e=>s('photo_url',e.target.value)}/></label>
+      <div className="photoPicker">
+        <span>Foto de perfil</span>
+        {f.photo_url&&<img className="profilePreview" src={f.photo_url} alt="Prévia"/>}
+        <div className="photoButtons">
+          <button type="button" onClick={()=>galleryRef.current?.click()}><Images size={17}/> Galeria</button>
+          <button type="button" onClick={()=>cameraRef.current?.click()}><Camera size={17}/> Câmera</button>
+        </div>
+        <input ref={galleryRef} className="hiddenInput" type="file" accept="image/*" onChange={e=>uploadProfilePhoto(e.target.files?.[0])}/>
+        <input ref={cameraRef} className="hiddenInput" type="file" accept="image/*" capture="environment" onChange={e=>uploadProfilePhoto(e.target.files?.[0])}/>
+      </div>
     </div>
 
     <h3>Treino</h3>
@@ -221,6 +303,26 @@ function Profile({session,initial,onSave,onCancel}){
       <label>Foco<select value={f.focus_area} onChange={e=>s('focus_area',e.target.value)}><option value="corpo inteiro">Corpo inteiro</option><option value="glúteos">Glúteos</option><option value="pernas">Pernas</option><option value="superiores">Superiores</option><option value="abdômen">Abdômen/core</option></select></label>
       <label>Nível<select value={f.experience_level} onChange={e=>s('experience_level',e.target.value)}><option value="iniciante">Iniciante</option><option value="intermediario">Intermediário</option><option value="avancado">Avançado</option></select></label>
       <label>Local<select value={f.training_location} onChange={e=>s('training_location',e.target.value)}><option value="academia">Academia</option><option value="casa">Casa</option><option value="ambos">Ambos</option></select></label>
+      {(f.training_location==='casa'||f.training_location==='ambos')&&
+        <div className="equipmentBox">
+          <strong>Equipamentos disponíveis em casa</strong>
+          {[
+            ['halteres','Halteres'],
+            ['elastico','Elástico'],
+            ['mochila','Mochila com peso'],
+            ['banco','Banco / cadeira firme'],
+            ['barra','Barra fixa'],
+            ['colchonete','Colchonete']
+          ].map(([id,label])=><label className="checkLine" key={id}>
+            <input type="checkbox"
+              checked={Array.isArray(f.home_equipment)&&f.home_equipment.includes(id)}
+              onChange={e=>{
+                const current=Array.isArray(f.home_equipment)?f.home_equipment:[]
+                s('home_equipment',e.target.checked?[...current,id]:current.filter(x=>x!==id))
+              }}/>
+            <span>{label}</span>
+          </label>)}
+        </div>}
       <label>Dias/semana<input type="number" min="1" max="5" value={f.training_days} onChange={e=>s('training_days',e.target.value)}/></label>
       <label>Tempo/sessão<input type="number" value={f.session_minutes} onChange={e=>s('session_minutes',e.target.value)}/></label>
       <label>Cardio<select value={f.cardio_preference} onChange={e=>s('cardio_preference',e.target.value)}><option value="caminhada">Caminhada</option><option value="bicicleta">Bicicleta</option><option value="elíptico">Elíptico</option><option value="escada">Escada</option></select></label>
@@ -269,6 +371,8 @@ function Profile({session,initial,onSave,onCancel}){
 function App(){
   const[session,setSession]=useState(null),[profile,setProfile]=useState(null),[edit,setEdit]=useState(false),[tab,setTab]=useState('Hoje')
   const[history,setHistory]=useState([]),[weight,setWeight]=useState(0),[water,setWater]=useState(0),[cal,setCal]=useState(0),[protein,setProtein]=useState(0),[cardio,setCardio]=useState(0),[status,setStatus]=useState('')
+  const[progressPhotos,setProgressPhotos]=useState([]),[photoType,setPhotoType]=useState('frente')
+  const progressGalleryRef=useRef(null),progressCameraRef=useRef(null)
 
   useEffect(()=>{
     supabase.auth.getSession().then(({data})=>setSession(data.session))
@@ -286,6 +390,33 @@ function App(){
     const today=new Date().toISOString().slice(0,10),row=hist.find(x=>x.checkin_date===today)
     if(row){setWeight(Number(row.weight_kg||p?.start_weight_kg||0));setWater(Number(row.water_l||0));setCal(Number(row.calories_consumed||0));setProtein(Number(row.protein_consumed_g||0));setCardio(Number(row.cardio_minutes_done||0))}
     else if(p){setWeight(Number(p.start_weight_kg));setWater(0);setCal(0);setProtein(0);setCardio(0)}
+    await loadProgressPhotos(uid)
+  }
+
+  async function loadProgressPhotos(uid=session.user.id){
+    const {data,error}=await supabase.from('progress_photos').select('*').eq('user_id',uid).order('taken_at',{ascending:false})
+    if(error){console.error(error);return}
+    const withUrls=await Promise.all((data||[]).map(async row=>{
+      const {data:signed}=await supabase.storage.from('progress-photos').createSignedUrl(row.storage_path,3600)
+      return {...row,signed_url:signed?.signedUrl||''}
+    }))
+    setProgressPhotos(withUrls)
+  }
+
+  async function uploadProgressPhoto(file){
+    if(!file)return
+    setStatus('Enviando foto de evolução...')
+    const ext=(file.name?.split('.').pop()||'jpg').toLowerCase()
+    const stamp=Date.now()
+    const path=`${session.user.id}/${photoType}-${stamp}.${ext}`
+    const {error:upErr}=await supabase.storage.from('progress-photos').upload(path,file,{contentType:file.type||'image/jpeg'})
+    if(upErr){setStatus('Erro na foto: '+upErr.message);return}
+    const {error:dbErr}=await supabase.from('progress_photos').insert({
+      user_id:session.user.id,photo_type:photoType,storage_path:path,taken_at:new Date().toISOString()
+    })
+    if(dbErr){setStatus('Erro ao registrar foto: '+dbErr.message);return}
+    setStatus('Foto de evolução salva.')
+    await loadProgressPhotos()
   }
 
   async function saveDay(){
@@ -330,7 +461,14 @@ function App(){
     </>}
 
     {tab==='Treino'&&<>
-      <section><div className="title"><Dumbbell size={18}/> Local</div><p><b>{profile.training_location==='casa'?'Casa':profile.training_location==='academia'?'Academia':'Casa e academia'}</b></p></section>
+      <section>
+        <div className="title"><Dumbbell size={18}/> Local e progressão</div>
+        <p><b>{profile.training_location==='casa'?'Casa':profile.training_location==='academia'?'Academia':'Casa e academia'}</b></p>
+        {profile.training_location==='casa'&&<div className="note">
+          Equipamentos: {Array.isArray(profile.home_equipment)&&profile.home_equipment.length?profile.home_equipment.join(', '):'peso corporal'}.
+          Quando atingir o topo da faixa de repetições com boa técnica em todas as séries, aumente um pouco a carga da mochila/halter/elástico ou use uma variação mais difícil.
+        </div>}
+      </section>
       <div className="grid2">{p.map(d=><section key={d.name}><div className="title"><Dumbbell size={18}/> Treino {d.name}</div><p><b>{d.sub}</b></p><ul>{d.ex.map(x=><li key={x}>{x}</li>)}</ul></section>)}</div>
     </>}
 
@@ -361,7 +499,37 @@ function App(){
       </section>
     </>}
 
-    {tab==='Progresso'&&<section><div className="title"><Scale size={18}/> Evolução</div>{chart.length?<div style={{height:300}}><ResponsiveContainer><LineChart data={chart}><CartesianGrid strokeDasharray="3 3"/><XAxis dataKey="date"/><YAxis domain={['dataMin - 1','dataMax + 1']}/><Tooltip/><Line dataKey="peso" strokeWidth={3}/></LineChart></ResponsiveContainer></div>:<p>Sem registros ainda.</p>}</section>}
+    {tab==='Progresso'&&<>
+      <section>
+        <div className="title"><Scale size={18}/> Evolução do peso</div>
+        {chart.length?<div style={{height:300}}><ResponsiveContainer><LineChart data={chart}><CartesianGrid strokeDasharray="3 3"/><XAxis dataKey="date"/><YAxis domain={['dataMin - 1','dataMax + 1']}/><Tooltip/><Line dataKey="peso" strokeWidth={3}/></LineChart></ResponsiveContainer></div>:<p>Sem registros ainda.</p>}
+      </section>
+
+      <section>
+        <div className="title"><ImagePlus size={18}/> Fotos de evolução</div>
+        <div className="photoControl">
+          <label>Posição<select value={photoType} onChange={e=>setPhotoType(e.target.value)}>
+            <option value="frente">Frente</option>
+            <option value="lado">Lado</option>
+            <option value="costas">Costas</option>
+          </select></label>
+          <div className="photoButtons">
+            <button type="button" onClick={()=>progressGalleryRef.current?.click()}><Images size={17}/> Galeria</button>
+            <button type="button" onClick={()=>progressCameraRef.current?.click()}><Camera size={17}/> Câmera</button>
+          </div>
+          <input ref={progressGalleryRef} className="hiddenInput" type="file" accept="image/*" onChange={e=>uploadProgressPhoto(e.target.files?.[0])}/>
+          <input ref={progressCameraRef} className="hiddenInput" type="file" accept="image/*" capture="environment" onChange={e=>uploadProgressPhoto(e.target.files?.[0])}/>
+        </div>
+
+        {progressPhotos.length?
+          <div className="photoGrid">{progressPhotos.map(p=><div className="progressPhoto" key={p.id}>
+            {p.signed_url&&<img src={p.signed_url} alt={p.photo_type}/>}
+            <strong>{p.photo_type}</strong>
+            <span>{new Date(p.taken_at).toLocaleDateString('pt-BR')}</span>
+          </div>)}</div>
+          :<p>Nenhuma foto de evolução ainda.</p>}
+      </section>
+    </>}
 
     <footer>{APP_VERSION}</footer>
   </div>

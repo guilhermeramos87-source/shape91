@@ -16,3 +16,18 @@ footer{text-align:center;color:#64748b;padding:12px}
 .mealTitle b{background:#0f172a;border:1px solid #334155;border-radius:10px;padding:7px 9px}
 .swapBox{display:grid;gap:6px;background:#0f172a;border:1px solid #334155;border-radius:12px;padding:11px;margin-top:12px}
 .swapBox span{color:#cbd5e1;font-size:13px}
+
+.equipmentBox{grid-column:1/-1;background:#0f172a;border:1px solid #263244;border-radius:12px;padding:12px;display:grid;gap:8px}
+.checkLine{display:flex!important;align-items:center;gap:8px;background:transparent!important;border:0!important;padding:2px!important}
+.checkLine input{width:auto}
+.photoPicker{background:#0f172a;border:1px solid #263244;border-radius:12px;padding:12px;display:grid;gap:10px}
+.profilePreview{width:90px;height:90px;border-radius:50%;object-fit:cover;border:1px solid #334155}
+.photoButtons{display:flex;gap:8px;flex-wrap:wrap}
+.photoButtons button{background:#1e293b;color:white;border:1px solid #334155;border-radius:10px;padding:9px 11px;display:flex;align-items:center;gap:6px}
+.hiddenInput{display:none}
+.photoControl{display:grid;gap:10px;max-width:420px}
+.photoGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:14px}
+.progressPhoto{background:#0f172a;border:1px solid #263244;border-radius:12px;padding:8px;display:grid;gap:5px}
+.progressPhoto img{width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:8px}
+.progressPhoto span{color:#94a3b8;font-size:12px}
+@media(max-width:780px){.photoGrid{grid-template-columns:repeat(2,1fr)}}

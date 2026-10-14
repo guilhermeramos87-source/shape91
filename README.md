@@ -1,49 +1,43 @@
-# Shape 91 V10 CLEAN
+# Shape 91 V11.1 CLEAN
 
-Inclui tudo da V9 e adiciona dieta automática.
+Mantém tudo da V10.1 e adiciona:
 
-A dieta usa:
-- sexo
-- idade
-- altura
-- peso
-- objetivo
-- calorias
-- proteína
-- número de refeições
-- horários cadastrados
-- preferências
-- restrições alimentares
+- Foto de perfil por câmera ou galeria
+- Fotos de evolução: frente, lado e costas
+- Fotos de evolução privadas por usuário
+- Equipamentos disponíveis em casa
+- Treino caseiro realmente adaptado aos equipamentos
+- Orientação de progressão de carga/repetições
+- Dieta automática
+- Rotina completa com horários
+- Metas automáticas/manuais
+- Meta x realizado
+- Multiusuário
 
-Cada refeição mostra:
-- horário
-- calorias aproximadas
-- proteína aproximada
-- porções sugeridas
-- substituições
+## 1. Supabase
+Execute `supabase_v11_migration.sql` no SQL Editor.
 
-Também mantém:
-- rotina completa de horários
-- treino Casa sem máquinas
-- treino Academia
-- foto por URL
-- edição de perfil
-- meta x realizado
-- multiusuário
+Ele cria:
+- campos de equipamentos e foto
+- tabela `progress_photos`
+- bucket público `profile-photos`
+- bucket privado `progress-photos`
+- políticas de acesso por usuário
 
-## Supabase
-Execute `supabase_v10_migration.sql`.
+## 2. Atualização
+Preserve `.env.local` e `.git`.
+Substitua os demais arquivos pela V11.
 
-## Atualização
-Preserve `.env.local` e `.git`, substitua os demais arquivos pela V10.
-
-## Teste
+## 3. Teste
 npm install
 npm run dev
 
-Confirme `V10 CLEAN`.
+Confirme `V11.1 CLEAN`.
 
-## Publicar
+## 4. Publicar
 git add -A
-git commit -m "Publica Shape 91 V10 com dieta automatica"
+git commit -m "Publica Shape 91 V11 fotos e treino casa"
 git push
+
+## Correção V11.1
+Corrige imports de câmera/galeria e `useRef`, que causavam tela em branco no navegador.
