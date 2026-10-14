@@ -1,7 +1,7 @@
 {
-  "name": "shape91-v2",
+  "name": "shape91-v9-clean",
   "private": true,
-  "version": "2.0.0",
+  "version": "9.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",

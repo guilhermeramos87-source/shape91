@@ -1,43 +1,49 @@
-# Shape 91 — V2
+# Shape 91 V10 CLEAN
 
-Versão com login, Supabase e histórico sincronizado.
+Inclui tudo da V9 e adiciona dieta automática.
 
-## 1. Criar projeto no Supabase
-Acesse https://supabase.com e crie um projeto.
+A dieta usa:
+- sexo
+- idade
+- altura
+- peso
+- objetivo
+- calorias
+- proteína
+- número de refeições
+- horários cadastrados
+- preferências
+- restrições alimentares
 
-## 2. Criar a tabela
-No painel do Supabase:
-SQL Editor -> New query -> cole todo o conteúdo de `supabase_schema.sql` -> Run.
+Cada refeição mostra:
+- horário
+- calorias aproximadas
+- proteína aproximada
+- porções sugeridas
+- substituições
 
-## 3. Pegar URL e Publishable Key
-No projeto do Supabase abra o painel Connect e copie:
-- Project URL
-- Publishable Key
+Também mantém:
+- rotina completa de horários
+- treino Casa sem máquinas
+- treino Academia
+- foto por URL
+- edição de perfil
+- meta x realizado
+- multiusuário
 
-## 4. Criar `.env.local`
-Na raiz do projeto copie `.env.example` para `.env.local` e preencha:
+## Supabase
+Execute `supabase_v10_migration.sql`.
 
-VITE_SUPABASE_URL=...
-VITE_SUPABASE_PUBLISHABLE_KEY=...
+## Atualização
+Preserve `.env.local` e `.git`, substitua os demais arquivos pela V10.
 
-## 5. Instalar e rodar
-No Prompt de Comando dentro da pasta:
-
+## Teste
 npm install
 npm run dev
 
-## 6. Criar sua conta
-Abra o endereço local do Vite, clique em Criar conta e cadastre seu e-mail/senha.
-Se o Supabase exigir confirmação de e-mail, confirme antes de entrar.
+Confirme `V10 CLEAN`.
 
-## 7. Publicar
-Suba o projeto para um repositório GitHub e importe na Vercel.
-No projeto da Vercel, adicione as duas variáveis:
-VITE_SUPABASE_URL
-VITE_SUPABASE_PUBLISHABLE_KEY
-
-Depois faça o deploy.
-
-## Segurança
-O arquivo `.env.local` está ignorado no Git. Não publique sua chave secreta/service_role.
-A Publishable Key é a chave destinada ao cliente web; o acesso aos dados é protegido por RLS.
+## Publicar
+git add -A
+git commit -m "Publica Shape 91 V10 com dieta automatica"
+git push
